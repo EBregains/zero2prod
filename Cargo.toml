@@ -1,8 +1,29 @@
 [package]
 name = "zero2prod"
 version = "0.1.0"
+authors = ["Emiliano Bregains <ebregains@gmail.com>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+# One could use any path here, but I am following the community convention
+# One could specify a library name using the `name` field. If unspecified,
+# cargo will default to `package.name`, which is what I want.
+path = "src/lib.rs"
+
+# Notice the double square brackets: it's an array in TOML's syntax.
+# One can only have one library in a project, but one can have multiple binaries
+[[bin]]
+path = "src/main.rs"
+name = "zero2prod"
 
 [dependencies]
+actix-web = "4"
+config = "0.13"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
+serde = { version = "1", features = ["derive"]}
+
+# Dev dependencies are used exclusively when running tests or examples
+# They do not get included in the final application binary
+[dev-dependencies]
+reqwest = "0.11"
