@@ -24,6 +24,7 @@ sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-r
 serde = { version = "1", features = ["derive"]}
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4.15"
+env_logger = "0.9"
 
 # Dev dependencies are used exclusively when running tests or examples
 # They do not get included in the final application binary
