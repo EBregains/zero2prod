@@ -5,9 +5,9 @@
 // `cargo expand --test health_check` (<- name of the test file)
 
 use std::net::TcpListener;
-use actix_web::web::get;
-use sqlx::{Connection, PgConnection, PgPool};
-use zero2prod::configuration::get_config;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
+use uuid::Uuid;
+use zero2prod::configuration::{get_config, DatabaseSettings};
 
 pub struct TestApp {
   pub address: String,
@@ -19,10 +19,10 @@ async fn spawn_app() -> TestApp {
     let port = listener.local_addr().unwrap().port();
     let address =     format!("http://127.0.0.1:{}", port);
 
-    let configuration = get_config().expect("Failed to read configuration.");
-    let connection_pool = PgPool::connect(&configuration.database.connection_string())
-      .await
-      .expect("Failed to connect to Postgres.");
+    let mut configuration = get_config().expect("Failed to read configuration.");
+    configuration.database.database_name = Uuid::new_v4().to_string();
+    let connection_pool = configure_database(&configuration.database)
+      .await;
     let server = zero2prod::startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
     // Launch the server as a background task
     // tokio::spawn returns a handle to the spawned future,
@@ -32,6 +32,27 @@ async fn spawn_app() -> TestApp {
       address,
       db_pool: connection_pool,
     }
+}
+
+pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+  // Connect and create Data Base
+  let mut connection = PgConnection::connect(&config.conection_string_without_db())
+    .await
+    .expect("Failed to connect to Postgres.");
+  connection
+    .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+    .await
+    .expect("Failed to create database.");
+  // Migrate Database
+  let connection_pool = PgPool::connect(&config.connection_string())
+    .await
+    .expect("Failed to connect to Postgres.");
+  sqlx::migrate!("./migrations")
+    .run(&connection_pool)
+    .await
+    .expect("Failed to migrate the database.");
+
+  connection_pool
 }
 
 #[tokio::test]
